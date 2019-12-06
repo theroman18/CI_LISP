@@ -230,6 +230,22 @@ NUM_TYPE findFunctionType(OPER_TYPE func, NUM_TYPE op1, NUM_TYPE op2)
     return DOUBLE_TYPE;
 }
 
+RET_VAL print(AST_NODE *op)
+{
+    RET_VAL value = { INT_TYPE, NAN};
+
+    if (op != NULL)
+    {
+        printf("=>");
+        value = eval(op);
+        if (value.type == INT_TYPE)
+            printf(" %.0lf\n", value.value);
+        else
+            printf(" %.2f\n", value.value);
+    }
+    return value;
+}
+
 RET_VAL compareValTypeWithRetVal(SYMBOL_TABLE_NODE *symbolTableNode, RET_VAL value)
 {
     // (stNode->valType  RET_VAL)
@@ -382,6 +398,8 @@ RET_VAL evalFuncNode(AST_NODE *node)
             result.type = findFunctionType(func, op1.type, op2.type);
             result.value = hypot(op1.value, op2.value);
             break;
+        case PRINT_OPER:
+            return print(node->data.function.op1);
 
         default:
             yyerror("illegal function evaluated");
