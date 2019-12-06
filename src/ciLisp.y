@@ -9,7 +9,7 @@
     struct symbol_table_node *symNode;
 };
 
-%token <sval> FUNC SYMBOL
+%token <sval> FUNC SYMBOL TYPE
 %token <dval> INT DOUBLE
 %token LPAREN RPAREN EOL QUIT LET
 
@@ -92,7 +92,12 @@ let_list:
  let_elem:
      LPAREN SYMBOL s_expr RPAREN {
          fprintf(stderr, "yacc: let_elem ::= LPAREN SYMBOL s_expr RPAREN\n");
-         $$ = createSTNode($2, $3);
+         $$ = createSTNode(NULL, $2, $3);
+
+    }
+    | LPAREN TYPE SYMBOL s_expr RPAREN {
+             fprintf(stderr, "yacc: let_elem ::= LPAREN TYPE SYMBOL s_expr RPAREN\n");
+             $$ = createSTNode($2, $3, $4);
      };
 %%
 

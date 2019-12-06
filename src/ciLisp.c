@@ -52,6 +52,19 @@ OPER_TYPE resolveFunc(char *funcName)
     return CUSTOM_OPER;
 }
 
+NUM_TYPE resolveType(char *type)
+{
+    if(type == NULL)
+        return INT_TYPE;
+    else if (strcmp(type, "int") == 0)
+        return INT_TYPE;
+    else if (strcmp(type, "double") == 0)
+        return DOUBLE_TYPE;
+
+    yyerror("Error - faulty type");
+    return INT_TYPE;
+}
+
 AST_NODE *attachSTtoAST(SYMBOL_TABLE_NODE *symbolTable, AST_NODE *s_expr)
 {
     s_expr->symbolTable = symbolTable;
@@ -132,7 +145,7 @@ AST_NODE *createFunctionNode(char *funcName, AST_NODE *op1, AST_NODE *op2)
     // set funcNode ident to funcName so your custom variable can store any name you want
     if (functionNode->data.function.oper == CUSTOM_OPER)
     {
-        functionNode->data.function.ident = (char*) malloc(sizeof(funcName));
+        functionNode->data.function.ident = (char*) malloc(sizeof(funcName) + 1);
         strcpy(functionNode->data.function.ident, funcName);
     }
     // free funcName because we're done using it now
@@ -164,13 +177,14 @@ AST_NODE *createSymbolNode(char *ident)
     return symbolNode;
 }
 
-SYMBOL_TABLE_NODE *createSTNode(char *ident, AST_NODE *s_expr)
+SYMBOL_TABLE_NODE *createSTNode(char *type, char *ident, AST_NODE *s_expr)
 {
     AST_NODE *symbolTableNode = calloc(1, sizeof(SYMBOL_TABLE_NODE));
     symbolTableNode->type = SYM_NODE_TYPE;
     symbolTableNode->symbolTable = malloc(sizeof(SYMBOL_TABLE_NODE));
     symbolTableNode->symbolTable->ident = malloc(sizeof(char) * strlen(ident) + 1);
     strcpy(symbolTableNode->symbolTable->ident, ident);
+    symbolTableNode->symbolTable->val_type = resolveType(type);
     symbolTableNode->symbolTable->val = s_expr;
     symbolTableNode->symbolTable->next = NULL;
 
@@ -214,6 +228,26 @@ NUM_TYPE findFunctionType(OPER_TYPE func, NUM_TYPE op1, NUM_TYPE op2)
                 return INT_TYPE;
     }
     return DOUBLE_TYPE;
+}
+
+RET_VAL compareValTypeWithRetVal(SYMBOL_TABLE_NODE *symbolTableNode, RET_VAL value)
+{
+    // (stNode->valType  RET_VAL)
+    // (int                 3.33)    = 3
+    if (symbolTableNode->val_type == INT_TYPE && value.type == DOUBLE_TYPE)
+    {
+        printf("WARNING: incompatible type assignment for variables %s\n", symbolTableNode->ident);
+        freeNode((symbolTableNode->val));
+        symbolTableNode->val = createNumberNode(floor(value.value), INT_TYPE);
+        return (RET_VAL){ INT_TYPE, floor(value.value) };
+    }
+
+    // (double 4) = 4.0
+    if (symbolTableNode->val_type == DOUBLE_TYPE && value.type == INT_TYPE)
+        return (RET_VAL){ DOUBLE_TYPE, value.value };
+
+
+    return value;
 }
 
 // Evaluates an AST_NODE.
@@ -356,19 +390,20 @@ RET_VAL evalFuncNode(AST_NODE *node)
     return result;
 }
 
-RET_VAL evalSymbol(AST_NODE *p, char *ident)
+RET_VAL evalSymbol(AST_NODE *astNode, char *ident)
 {
-    if (p == NULL)
+    if (astNode == NULL)
     {
         yyerror("Undeclared symbol");
         printf("Error: An undeclared symbol was entered\n");
         return (RET_VAL) {INT_TYPE, NAN};
     }
 
-    SYMBOL_TABLE_NODE *node = findSymbol(p->symbolTable, ident);
+    SYMBOL_TABLE_NODE *node = findSymbol(astNode->symbolTable, ident);
     if (node != NULL)
-        return eval(node->val);
-    return evalSymbol(p->parent, ident);
+        return compareValTypeWithRetVal(node, eval(node->val));
+
+    return evalSymbol(astNode->parent, ident);
 }
 
 // prints the type and value of a RET_VAL

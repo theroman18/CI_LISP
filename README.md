@@ -25,3 +25,12 @@
 
 ### Remember to put function signatures in your header file, you will get compilation errors from not doing 
 
+# Task 3
+
+* Added type as a sval token
+* Added a case for let\_elem that allows a symbol table node's val\_type to be set to INT or DOUBLE type
+* Modified createSTNode because it needed another parameter for NUM\_TYPE
+* Implemented another helper function for number precision –– compareValTypeWithRetVal()
+
+<img width="629" alt="Screen Shot 2019-12-05 at 11 35 57 PM" src="https://user-images.githubusercontent.com/46359299/70305342-fb8d8a80-17b8-11ea-81bb-423fb1207046.png">
+

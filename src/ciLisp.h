@@ -91,6 +91,7 @@ typedef struct symbol_ast_node {
 } SYMBOL_AST_NODE;
 
 typedef struct symbol_table_node {
+    NUM_TYPE val_type;
     char *ident;
     struct ast_node *val;
     struct symbol_table_node *next;
@@ -115,7 +116,7 @@ SYMBOL_TABLE_NODE *addToSymbolTable(SYMBOL_TABLE_NODE *parent, SYMBOL_TABLE_NODE
 AST_NODE *createNumberNode(double value, NUM_TYPE type);
 AST_NODE *createFunctionNode(char *funcName, AST_NODE *op1, AST_NODE *op2);
 AST_NODE *createSymbolNode(char *ident);
-SYMBOL_TABLE_NODE *createSTNode(char *ident, AST_NODE *s_expr);
+SYMBOL_TABLE_NODE *createSTNode(char *type, char *ident, AST_NODE *s_expr)  ;
 
 void freeNode(AST_NODE *node);
 
