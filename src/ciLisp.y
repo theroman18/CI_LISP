@@ -6,13 +6,15 @@
     double dval;
     char *sval;
     struct ast_node *astNode;
+    struct symbol_table_node *symNode;
 };
 
-%token <sval> FUNC
+%token <sval> FUNC SYMBOL
 %token <dval> INT DOUBLE
-%token LPAREN RPAREN EOL QUIT
+%token LPAREN RPAREN EOL QUIT LET
 
 %type <astNode> s_expr f_expr number
+%type <symNode> let_section let_list let_elem
 
 %%
 
@@ -32,6 +34,14 @@ s_expr:
     }
     | f_expr {
         $$ = $1;
+    }
+    | SYMBOL {
+        fprintf(stderr, "yacc: s_expr ::= SYMBOL\n");
+        $$ = createSymbolNode($1);
+    }
+    | LPAREN let_section s_expr RPAREN {
+        fprintf(stderr, "yacc: s_expr ::= LPAREN let_section s_expr RPAREN\n");
+        $$ = attachSTtoAST($2, $3);
     }
     | QUIT {
         fprintf(stderr, "yacc: s_expr ::= QUIT\n");
@@ -62,5 +72,27 @@ f_expr:
         fprintf(stderr, "yacc: s_expr ::= LPAREN FUNC expr expr RPAREN\n");
         $$ = createFunctionNode($2, $3, $4);
     };
+
+let_section:
+    LPAREN LET let_list RPAREN {
+        fprintf(stderr, "yacc: let_section ::= LPAREN LET let_list RPAREN\n");
+        $$ = $3;
+    };
+
+let_list:
+    let_elem  {
+        fprintf(stderr, "yacc: let_list ::= let_elem\n");
+        $$ = $1;
+    }
+    | let_list let_elem {
+          fprintf(stderr, "yacc: let_list ::= let_list let_elem\n");
+          $$ = addToSymbolTable($1, $2);
+     };
+
+ let_elem:
+     LPAREN SYMBOL s_expr RPAREN {
+         fprintf(stderr, "yacc: let_elem ::= LPAREN SYMBOL s_expr RPAREN\n");
+         $$ = createSTNode($2, $3);
+     };
 %%
 

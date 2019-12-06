@@ -52,6 +52,37 @@ OPER_TYPE resolveFunc(char *funcName)
     return CUSTOM_OPER;
 }
 
+AST_NODE *attachSTtoAST(SYMBOL_TABLE_NODE *symbolTable, AST_NODE *s_expr)
+{
+    s_expr->symbolTable = symbolTable;
+    return s_expr;
+}
+
+SYMBOL_TABLE_NODE *findSymbol(SYMBOL_TABLE_NODE *symbolTableNode, char *ident)
+{
+    while (symbolTableNode != NULL)
+    {
+        if ( strcmp(ident, symbolTableNode->ident) == 0 )
+            return symbolTableNode;
+
+        symbolTableNode = symbolTableNode->next;
+    }
+    return NULL;
+}
+
+SYMBOL_TABLE_NODE *addToSymbolTable(SYMBOL_TABLE_NODE *parent, SYMBOL_TABLE_NODE *stNode)
+{
+    SYMBOL_TABLE_NODE *node = findSymbol(parent, stNode->ident);
+    if (node != NULL)
+    {
+        yyerror("The symbol already exists");
+        return parent;
+    }
+
+    stNode->next = parent;
+    return stNode;
+}
+
 // Called when an INT or DOUBLE token is encountered (see ciLisp.l and ciLisp.y).
 // Creates an AST_NODE for the number.
 // Sets the AST_NODE's type to number.
@@ -110,7 +141,40 @@ AST_NODE *createFunctionNode(char *funcName, AST_NODE *op1, AST_NODE *op2)
     // set the op1 to the func ast node struct
     functionNode->data.function.op1 = op1;
     functionNode->data.function.op2 = op2;
+
+    if (functionNode->data.function.op1 != NULL)
+        functionNode->data.function.op1->parent = functionNode;
+    if(functionNode->data.function.op2 != NULL)
+        functionNode->data.function.op2->parent = functionNode;
+
     return functionNode;
+}
+
+AST_NODE *createSymbolNode(char *ident)
+{
+    AST_NODE *symbolNode = calloc(1, sizeof(AST_NODE));
+    if (symbolNode == NULL) {
+        yyerror("out of memory");
+        return NULL;
+    }
+    symbolNode->type = SYM_NODE_TYPE;
+    symbolNode->data.symbol.ident = (char*) malloc(sizeof(ident));
+    strcpy(symbolNode->data.symbol.ident, ident);
+    free(ident);
+    return symbolNode;
+}
+
+SYMBOL_TABLE_NODE *createSTNode(char *ident, AST_NODE *s_expr)
+{
+    AST_NODE *symbolTableNode = calloc(1, sizeof(SYMBOL_TABLE_NODE));
+    symbolTableNode->type = SYM_NODE_TYPE;
+    symbolTableNode->symbolTable = malloc(sizeof(SYMBOL_TABLE_NODE));
+    symbolTableNode->symbolTable->ident = malloc(sizeof(char) * strlen(ident) + 1);
+    strcpy(symbolTableNode->symbolTable->ident, ident);
+    symbolTableNode->symbolTable->val = s_expr;
+    symbolTableNode->symbolTable->next = NULL;
+
+    return symbolTableNode->symbolTable;
 }
 
 // Called after execution is done on the base of the tree.
@@ -173,6 +237,9 @@ RET_VAL eval(AST_NODE *node)
             break;
         case FUNC_NODE_TYPE:
             result = evalFuncNode(node);
+            break;
+        case SYM_NODE_TYPE:
+            result = evalSymbol(node, node->data.symbol.ident);
             break;
         default:
             yyerror("Invalid AST_NODE_TYPE, probably invalid writes somewhere!");
@@ -287,6 +354,20 @@ RET_VAL evalFuncNode(AST_NODE *node)
     }
 
     return result;
+}
+
+RET_VAL evalSymbol(AST_NODE *p, char *ident)
+{
+    if (p == NULL) {
+        yyerror("Undeclared symbol");
+        printf("Error: An undeclared symbol was entered\n");
+        return (RET_VAL) {INT_TYPE, NAN};
+    }
+
+    SYMBOL_TABLE_NODE *node = findSymbol(p->symbolTable, ident);
+    if (node != NULL)
+        return eval(node->val);
+    return evalSymbol(p->parent, ident);
 }
 
 // prints the type and value of a RET_VAL
