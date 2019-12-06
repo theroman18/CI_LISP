@@ -167,7 +167,7 @@ AST_NODE *createSymbolNode(char *ident)
 {
     AST_NODE *symbolNode = calloc(1, sizeof(AST_NODE));
     if (symbolNode == NULL) {
-        yyerror("out of memory");
+        yyerror("Memory Allocation failed!");
         return NULL;
     }
     symbolNode->type = SYM_NODE_TYPE;
