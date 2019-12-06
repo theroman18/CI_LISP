@@ -358,7 +358,8 @@ RET_VAL evalFuncNode(AST_NODE *node)
 
 RET_VAL evalSymbol(AST_NODE *p, char *ident)
 {
-    if (p == NULL) {
+    if (p == NULL)
+    {
         yyerror("Undeclared symbol");
         printf("Error: An undeclared symbol was entered\n");
         return (RET_VAL) {INT_TYPE, NAN};
